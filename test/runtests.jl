@@ -1,25 +1,15 @@
 using FactCheck
-using CollaborativeFiltering: cost0, cost1
+using CollaborativeFiltering: cost_naive, cost_devec, grad_naive
 
-Y = [5 0 5; 0 5 -1]
-R = [true true true; true true false]
-# n_features = 2
-# n_users = size(Y, 1)
-# n_items = size(Y, 2)
-X = [4 0; 1 5]
-Theta = [1 0; 0 1; 1 1]
-
-facts("cost0") do
-    @fact cost0(Y, R, X, Theta, 0) => 1.5
-    @fact cost0(Y, R, X, Theta, 1) => 24.5
+function tinydata()
+  Y = [5 0 5; 0 5 -1]
+  R = [true true true; true true false]
+  X = [4 0; 1 5]
+  Theta = [1 0; 0 1; 1 1]
+  Y, R, X, Theta
 end
 
-facts("cost1") do
-    @fact cost1(Y, R, X, Theta, 0) => 1.5
-    @fact cost1(Y, R, X, Theta, 1) => 24.5
-end
-
-function testdata()
+function randdata()
   n_items = 10000
   n_users = 2000
   n_features = 300
@@ -30,10 +20,35 @@ function testdata()
   Y, R, X, Theta
 end
 
-facts("cost1 equal to cost0") do
-  Y, R, X, Theta = testdata()
+function grad_storage(fn, Y, R, X, Theta, lambda)
+  storage = Array(Float64, size(X, 1)*size(X, 2) + size(Theta, 1)*size(Theta, 2))
+  fn(Y, R, X, Theta, lambda, storage)
+  storage
+end
+
+facts("naive cost function") do
+  Y, R, X, Theta = tinydata()
+  @fact cost_naive(Y, R, X, Theta, 0) => 1.5
+  @fact cost_naive(Y, R, X, Theta, 1) => 24.5
+end
+
+facts("devectorized cost function") do
+  Y, R, X, Theta = tinydata()
+  @fact cost_devec(Y, R, X, Theta, 0) => 1.5
+  @fact cost_devec(Y, R, X, Theta, 1) => 24.5
+end
+
+
+facts("cost_devec equal to cost_naive") do
+  Y, R, X, Theta = randdata()
   lambda = 0.3
-  c0 = cost0(Y, R, X, Theta, lambda)
-  c1 = cost1(Y, R, X, Theta, lambda)
-  @fact c1 => roughly(c0)
+  naive = cost_naive(Y, R, X, Theta, lambda)
+  devec = cost_devec(Y, R, X, Theta, lambda)
+  @fact devec => roughly(naive)
+end
+
+facts("naive gradient function") do
+  Y, R, X, Theta = tinydata()
+  @fact grad_storage(grad_naive, Y, R, X, Theta, 0) => [-2.0,1.0,-1.0,0.0,-3.0,0.0,-4.0,5.0,0.0,0.0]
+  @fact grad_storage(grad_naive, Y, R, X, Theta, 1) => [2.0,2.0,-1.0,5.0,-2.0,0.0,-3.0,5.0,1.0,1.0]
 end
