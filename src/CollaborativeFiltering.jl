@@ -10,8 +10,9 @@ function regularization(params::Vector{Float64})
   reg*lambda
 end
 
-cost0(Y, R, X, Theta, lambda) =
+function cost0(Y, R, X, Theta, lambda)
   sum(((X*Theta'-Y).^2).*R)/2 + lambda/2*sum(Theta.^2) + lambda/2*sum(X.^2)
+end
 
 function cost1(Y, R, X, Theta, lambda)
   predictions = X*Theta'

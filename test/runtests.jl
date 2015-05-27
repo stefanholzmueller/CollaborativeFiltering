@@ -9,17 +9,17 @@ R = [true true true; true true false]
 X = [4 0; 1 5]
 Theta = [1 0; 0 1; 1 1]
 
-facts("tests for cost function") do
+facts("cost0") do
     @fact cost0(Y, R, X, Theta, 0) => 1.5
     @fact cost0(Y, R, X, Theta, 1) => 24.5
 end
 
-facts("tests for cost1 function") do
+facts("cost1") do
     @fact cost1(Y, R, X, Theta, 0) => 1.5
     @fact cost1(Y, R, X, Theta, 1) => 24.5
 end
 
-function benchmark()
+function testdata()
   n_items = 10000
   n_users = 2000
   n_features = 300
@@ -27,7 +27,13 @@ function benchmark()
   Theta = randn(n_users, n_features)
   Y = rand(n_items, n_users)
   R = randbool(n_items, n_users)
-  @time cost0(Y, R, X, Theta, 1)
-  @time cost1(Y, R, X, Theta, 1)
+  Y, R, X, Theta
 end
-benchmark()
+
+facts("cost1 equal to cost0") do
+  Y, R, X, Theta = testdata()
+  lambda = 0.3
+  c0 = cost0(Y, R, X, Theta, lambda)
+  c1 = cost1(Y, R, X, Theta, lambda)
+  @fact c1 => roughly(c0)
+end
