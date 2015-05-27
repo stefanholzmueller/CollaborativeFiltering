@@ -1,1 +1,1 @@
-# CollaborativeFiltering
+# CollaborativeFiltering.jl
