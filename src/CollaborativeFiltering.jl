@@ -16,15 +16,63 @@ end
 
 function grad_naive(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
   X_grad = zeros(size(X))
-  Theta_grad = zeros(size(Theta))  # randomize???
+  Theta_grad = zeros(size(Theta))
   n_items = size(Y, 1)
   n_users = size(Y, 2)
 
   for i=1:n_items  #### 35% gc time
-    for j=1:n_users # colum based array access?! try
+    for j=1:n_users # colum based array access!
+      if R[i,j]
+        X_grad[i,:] = X_grad[i,:] + (Theta[j,:]*X[i,:]'-Y[i,j]) .* Theta[j,:]   # Y != 0 where R == 0
+        Theta_grad[j,:] = Theta_grad[j,:] + (Theta[j,:]*X[i,:]'-Y[i,j]) .* X[i,:]
+      end
+    end
+  end
+
+  X_grad = X_grad + lambda*X
+  Theta_grad = Theta_grad + lambda*Theta
+  updated = [X_grad[:]; Theta_grad[:]] # unroll
+  for i=1:length(updated) # @simd?
+    storage[i] = updated[i]
+  end
+end
+
+function grad_array(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
+  X_grad = zeros(size(X))
+  Theta_grad = zeros(size(Theta))
+  n_items = size(Y, 1)
+  n_users = size(Y, 2)
+
+  for j=1:n_users
+    for i=1:n_items
       if R[i,j]
         X_grad[i,:] = X_grad[i,:] + (Theta[j,:]*X[i,:]'-Y[i,j]) .* Theta[j,:]
         Theta_grad[j,:] = Theta_grad[j,:] + (Theta[j,:]*X[i,:]'-Y[i,j]) .* X[i,:]
+      end
+    end
+  end
+
+  X_grad = X_grad + lambda*X
+  Theta_grad = Theta_grad + lambda*Theta
+  updated = [X_grad[:]; Theta_grad[:]] # unroll
+  for i=1:length(updated) # @simd?
+    storage[i] = updated[i]
+  end
+end
+
+
+function grad_pred(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
+  X_grad = zeros(size(X))
+  Theta_grad = zeros(size(Theta))
+  n_items = size(Y, 1)
+  n_users = size(Y, 2)
+
+  pred = X*Theta'
+  for i=1:n_items
+    for j=1:n_users
+      if R[i,j]
+        X_grad[i,:] = X_grad[i,:] + (pred[i,j]-Y[i,j]) .* Theta[j,:]
+        Theta_grad[j,:] = Theta_grad[j,:] + (pred[i,j]-Y[i,j]) .* X[i,:]
       end
     end
   end

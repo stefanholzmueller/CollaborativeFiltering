@@ -1,5 +1,5 @@
 using FactCheck
-using CollaborativeFiltering: cost_naive, cost_devec, grad_naive
+using CollaborativeFiltering: cost_naive, cost_devec, grad_naive, grad_array, grad_pred
 
 function tinydata()
   Y = [5 0 5; 0 5 -1]
@@ -9,10 +9,7 @@ function tinydata()
   Y, R, X, Theta
 end
 
-function randdata()
-  n_items = 10000
-  n_users = 2000
-  n_features = 300
+function randdata(n_items = 10000, n_users = 2000, n_features = 300)
   X = randn(n_items, n_features)
   Theta = randn(n_users, n_features)
   Y = rand(n_items, n_users)
@@ -38,7 +35,6 @@ facts("devectorized cost function") do
   @fact cost_devec(Y, R, X, Theta, 1) => 24.5
 end
 
-
 facts("cost_devec equal to cost_naive") do
   Y, R, X, Theta = randdata()
   lambda = 0.3
@@ -51,4 +47,20 @@ facts("naive gradient function") do
   Y, R, X, Theta = tinydata()
   @fact grad_storage(grad_naive, Y, R, X, Theta, 0) => [-2.0,1.0,-1.0,0.0,-3.0,0.0,-4.0,5.0,0.0,0.0]
   @fact grad_storage(grad_naive, Y, R, X, Theta, 1) => [2.0,2.0,-1.0,5.0,-2.0,0.0,-3.0,5.0,1.0,1.0]
+end
+
+facts("grad_array equal to grad_naive") do
+  Y, R, X, Theta = randdata(100, 200, 300) # fails if 100, 200, 300
+  lambda = 0.3
+  naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
+  array = grad_storage(grad_array, Y, R, X, Theta, lambda)
+  @fact array => roughly(naive)
+end
+
+facts("grad_pred equal to grad_naive") do
+  Y, R, X, Theta = randdata(100, 200, 300)
+  lambda = 0.3
+  naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
+  pred = grad_storage(grad_pred, Y, R, X, Theta, lambda)
+  @fact pred => roughly(naive)
 end
