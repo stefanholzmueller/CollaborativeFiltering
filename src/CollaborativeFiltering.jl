@@ -60,7 +60,6 @@ function grad_array(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector
   end
 end
 
-
 function grad_pred(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
   X_grad = zeros(size(X))
   Theta_grad = zeros(size(Theta))
@@ -82,6 +81,64 @@ function grad_pred(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{
   updated = [X_grad[:]; Theta_grad[:]] # unroll
   for i=1:length(updated) # @simd?
     storage[i] = updated[i]
+  end
+end
+
+function grad_error(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
+  X_grad = zeros(size(X))
+  Theta_grad = zeros(size(Theta))
+  n_items = size(Y, 1)
+  n_users = size(Y, 2)
+
+  pred = X*Theta'
+  error = pred - Y
+  for i=1:n_items
+    for j=1:n_users
+      if R[i,j]
+        X_grad[i,:] = X_grad[i,:] + error[i,j] .* Theta[j,:]
+        Theta_grad[j,:] = Theta_grad[j,:] + error[i,j] .* X[i,:]
+      end
+    end
+  end
+
+  X_grad = X_grad + lambda*X
+  Theta_grad = Theta_grad + lambda*Theta
+  updated = [X_grad[:]; Theta_grad[:]] # unroll
+  for i=1:length(updated) # @simd?
+    storage[i] = updated[i]
+  end
+end
+
+function grad_simd(Y, R::AbstractArray{Bool}, X, Theta, lambda, storage::Vector{Float64})
+  X_grad = zeros(size(X))
+  Theta_grad = zeros(size(Theta))
+  n_items = size(Y, 1)
+  n_users = size(Y, 2)
+  n_features = size(X, 2)
+
+  pred = X*Theta'
+  for i=1:n_items
+    for j=1:n_users
+      if R[i,j]
+        X_grad[i,:] = X_grad[i,:] + (pred[i,j]-Y[i,j]) .* Theta[j,:]
+        Theta_grad[j,:] = Theta_grad[j,:] + (pred[i,j]-Y[i,j]) .* X[i,:]
+      end
+    end
+  end
+
+  X_grad = X_grad + lambda*X
+  Theta_grad = Theta_grad + lambda*Theta
+
+  for f=1:n_features
+    @simd for i=1:n_items
+      @inbounds storage[f*i] = X_grad[i,f]
+    end
+  end
+  offset = n_items * n_features
+  for f=1:n_features
+    @simd for j=1:n_users
+      @inbounds storage[f*j+offset] = Theta_grad[j,f]
+    end
   end
 end
 

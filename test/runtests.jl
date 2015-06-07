@@ -1,5 +1,5 @@
 using FactCheck
-using CollaborativeFiltering: cost_naive, cost_devec, grad_naive, grad_array, grad_pred
+using CollaborativeFiltering: cost_naive, cost_devec, grad_naive, grad_array, grad_pred, grad_error, grad_simd
 
 function tinydata()
   Y = [5 0 5; 0 5 -1]
@@ -50,7 +50,7 @@ facts("naive gradient function") do
 end
 
 facts("grad_array equal to grad_naive") do
-  Y, R, X, Theta = randdata(100, 200, 300) # fails if 100, 200, 300
+  Y, R, X, Theta = randdata(100, 200, 300)
   lambda = 0.3
   naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
   array = grad_storage(grad_array, Y, R, X, Theta, lambda)
@@ -63,4 +63,20 @@ facts("grad_pred equal to grad_naive") do
   naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
   pred = grad_storage(grad_pred, Y, R, X, Theta, lambda)
   @fact pred => roughly(naive)
+end
+
+facts("grad_error equal to grad_naive") do
+  Y, R, X, Theta = randdata(100, 200, 300)
+  lambda = 0.3
+  naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
+  error = grad_storage(grad_error, Y, R, X, Theta, lambda)
+  @fact error => roughly(naive)
+end
+
+facts("grad_simd equal to grad_naive") do  # TODO metaprogramming
+  Y, R, X, Theta = randdata(100, 200, 300)
+  lambda = 0.3
+  naive = grad_storage(grad_naive, Y, R, X, Theta, lambda)
+  simd = grad_storage(grad_error, Y, R, X, Theta, lambda)
+  @fact simd => roughly(naive)
 end
